@@ -13,3 +13,11 @@ subscribe :: MonadIO m => Channel a b -> (a -> m ()) -> m ()
 subscribe channel f = forever $ do
     a <- liftIO $ atomically $ readTChan $ channelIn channel
     f a
+
+send :: MonadIO m => Channel a b -> b -> m ()
+send channel b =
+    let o = channelOut channel
+    in liftIO $ atomically $ writeTChan o b
+
+newChannel :: MonadIO m => m (Channel a b)
+newChannel = liftIO $ Channel <$> atomically newTChan <*> atomically newTChan
