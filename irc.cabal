@@ -31,5 +31,9 @@ executable irc
                      , wai
                      , wai-websockets
                      , aeson
+                     , lens
+                     , containers
+                     , acid-state
+                     , safecopy
   hs-source-dirs:      src
   default-language:    Haskell2010

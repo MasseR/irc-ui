@@ -1,4 +1,9 @@
-module Data.Channel (Channel) where
+module Data.Channel
+    ( Channel
+    , subscribe
+    , send
+    , newChannel
+    ) where
 
 import Control.Concurrent.STM.TChan
 import Control.Concurrent.STM (atomically)
