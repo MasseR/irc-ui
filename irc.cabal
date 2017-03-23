@@ -23,6 +23,12 @@ executable irc
                      , servant-server
                      , network-simple
                      , pipes
+                     , pipes-network
+                     , pipes-text
+                     , pipes-bytestring
+                     , pipes-group
+                     , pipes-attoparsec
+                     , attoparsec
                      , stm
                      , text
                      , bytestring
