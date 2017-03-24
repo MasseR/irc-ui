@@ -1,4 +1,5 @@
 {-# Language DeriveGeneric #-}
+{-# Language OverloadedStrings #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language FunctionalDependencies #-}
 {-# Language FlexibleInstances #-}
@@ -25,62 +26,53 @@ newtype Channel = Channel Text deriving (Generic, Show, ToJSON, FromJSON, IsStri
 newtype Nick = Nick Text deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
 
 data Message = Message { messageTimestamp :: UTCTime
+                       , messageSource :: Either Channel Nick
                        , messageContent :: Text }
              deriving (Show, Generic)
-
-data IrcMessage = IrcMessage { ircMessageSource :: Either Channel Nick
-                             , ircMessageMessage :: Message }
-                deriving(Show, Generic)
 
 data IrcJoin = IrcJoin { ircJoinChannel :: Channel
                        , ircJoinNick :: Nick }
              deriving(Show, Generic)
 
-newtype IrcPong = IrcPong Text deriving (Show, Generic)
+newtype Pong = Pong Text deriving (Show, Generic, ToJSON, FromJSON)
 
-data IrcEvent = EventMessage IrcMessage
-              | EventJoin IrcJoin
-              | EventPing Text
-              | EventPong IrcPong
-              | EventNick Nick
-              | EventUser Nick
-              deriving (Generic, Show)
+newtype Ping = Ping Text deriving (Show, Generic, ToJSON, FromJSON)
+
+data IrcUser = IrcUser { ircUserUser :: Text
+                       , ircUserMode :: Text
+                       , ircUserRealname :: Text }
+             deriving (Show, Generic)
+
+data InboundEvent = InboundMessage Message
+                  | InboundPing Ping
+                  deriving (Generic, Show)
 
 class ToIRC a where
     encodeIRC :: a -> ByteString
 
-instance ToIRC IrcPong where
-    encodeIRC (IrcPong p) = "PONG " <> TE.encodeUtf8 p
+instance ToIRC Pong where
+    encodeIRC (Pong p) = "PONG " <> TE.encodeUtf8 p
 
-makeFields ''IrcMessage
+instance ToJSON InboundEvent
+instance ToJSON Message
+
 makeFields ''Message
 makeFields ''IrcJoin
-makePrisms ''IrcEvent
+makePrisms ''InboundEvent
 deriveSafeCopy 0 'base ''Nick
 deriveSafeCopy 0 'base ''Channel
 deriveSafeCopy 0 'base ''Message
 
 
-instance ToJSON Message
-instance FromJSON Message
-instance ToJSON IrcPong
-instance FromJSON IrcPong
-instance ToJSON IrcJoin
-instance FromJSON IrcJoin
-instance ToJSON IrcMessage
-instance FromJSON IrcMessage
-instance ToJSON IrcEvent
-instance FromJSON IrcEvent
-
-parseIRC :: Parser IrcEvent
-parseIRC = EventPing <$> parsePing
-
-parsePing :: Parser Text
-parsePing = A.string "PING: " *> A.takeText
-
-parseSource :: Parser (Either Data.IRC.Channel Nick)
-parseSource = (Left . Data.IRC.Channel) <$> channel
-    <|> (Right . Nick) <$> nick
-    where
-        channel = T.cons <$> A.char '#' <*> A.takeWhile1 (/= ' ')
-        nick = A.takeWhile1 (/= ' ')
+-- parseIRC :: Parser InboundEvent
+-- parseIRC = InboundPing <$> parsePing
+--
+-- parsePing :: Parser Text
+-- parsePing = A.string "PING: " *> A.takeText
+--
+-- parseSource :: Parser (Either Data.IRC.Channel Nick)
+-- parseSource = (Left . Data.IRC.Channel) <$> channel
+--     <|> (Right . Nick) <$> nick
+--     where
+--         channel = T.cons <$> A.char '#' <*> A.takeWhile1 (/= ' ')
+--         nick = A.takeWhile1 (/= ' ')

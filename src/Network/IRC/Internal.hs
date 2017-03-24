@@ -23,7 +23,7 @@ import Control.Applicative
 
 connect host port = P.connect host port $ \(socket, _) -> do
     channel <- newChannel
-    runEffect $ for (producer socket >-> P.map (A.parse (parseIRC <* A.endOfInput))) (lift . print . eitherResult)
+    -- runEffect $ for (producer socket >-> P.map (A.parse (parseIRC <* A.endOfInput))) (lift . print . eitherResult)
     return channel
     where
         eitherResult (A.Done _ r) = Right r
