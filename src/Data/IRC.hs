@@ -10,7 +10,7 @@ module Data.IRC where
 import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 import Data.Aeson
-import GHC.Generics
+import GHC.Generics (Generic)
 import Data.String
 import Control.Lens
 import Data.SafeCopy
@@ -24,28 +24,37 @@ import Control.Applicative
 
 newtype Channel = Channel Text deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
 newtype Nick = Nick Text deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
+newtype Pong = Pong Text deriving (Show, Generic, ToJSON, FromJSON)
+newtype Ping = Ping Text deriving (Show, Generic, ToJSON, FromJSON)
 
-data Message = Message { messageTimestamp :: UTCTime
-                       , messageSource :: Either Channel Nick
+data Message = Message { messageSource :: Either Channel Nick
                        , messageContent :: Text }
              deriving (Show, Generic)
 
-data IrcJoin = IrcJoin { ircJoinChannel :: Channel
-                       , ircJoinNick :: Nick }
-             deriving(Show, Generic)
+data Join = Join { joinChannel :: Channel
+                 , joinNick :: Nick }
+          deriving(Show, Generic)
 
-newtype Pong = Pong Text deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype Ping = Ping Text deriving (Show, Generic, ToJSON, FromJSON)
-
-data IrcUser = IrcUser { ircUserUser :: Text
-                       , ircUserMode :: Text
-                       , ircUserRealname :: Text }
+data User = User { userUser :: Text
+                 , userMode :: Text
+                 , userRealname :: Text }
              deriving (Show, Generic)
+
+data NickChange = NickChange { nickChangeFrom :: Nick
+                             , nickChangeTo :: Nick }
+                deriving (Show, Generic)
 
 data InboundEvent = InboundMessage Message
                   | InboundPing Ping
+                  | InboundNick NickChange
                   deriving (Generic, Show)
+
+data OutboundEvent = OutboundMessage Message
+                   | OutboundPong Pong
+                   | OutboundNick Nick
+                   | OutboundUser User
+                   deriving (Generic, Show)
 
 class ToIRC a where
     encodeIRC :: a -> ByteString
@@ -55,10 +64,18 @@ instance ToIRC Pong where
 
 instance ToJSON InboundEvent
 instance ToJSON Message
+instance ToJSON NickChange
+
+instance FromJSON OutboundEvent
+instance FromJSON Message
+instance FromJSON User
 
 makeFields ''Message
-makeFields ''IrcJoin
+makeFields ''Join
+makeFields ''User
+makeFields ''NickChange
 makePrisms ''InboundEvent
+makePrisms ''OutboundEvent
 deriveSafeCopy 0 'base ''Nick
 deriveSafeCopy 0 'base ''Channel
 deriveSafeCopy 0 'base ''Message
