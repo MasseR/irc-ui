@@ -37,7 +37,6 @@ data Join = Join { joinChannel :: Channel
                  , joinNick :: Nick }
           deriving(Show, Generic)
 
-
 data User = User { userUser :: Text
                  , userMode :: Text
                  , userRealname :: Text }
@@ -49,6 +48,7 @@ data NickChange = NickChange { nickChangeFrom :: Nick
 
 data InboundEvent = InboundMessage Message
                   | InboundPing Ping
+                  | InboundMode Text
                   | InboundNick NickChange
                   deriving (Generic, Show)
 
@@ -56,6 +56,7 @@ data OutboundEvent = OutboundMessage Message
                    | OutboundPong Pong
                    | OutboundNick Nick
                    | OutboundUser User
+                   | OutboundJoin Join
                    deriving (Generic, Show)
 
 toIRC :: OutboundEvent -> ByteString
@@ -63,6 +64,7 @@ toIRC (OutboundMessage msg) = encodeIRC msg
 toIRC (OutboundPong msg) = encodeIRC msg
 toIRC (OutboundNick msg) = encodeIRC msg
 toIRC (OutboundUser msg) = encodeIRC msg
+toIRC (OutboundJoin msg) = encodeIRC msg
 
 class ToIRC a where
     encodeIRC :: a -> ByteString
@@ -83,6 +85,9 @@ instance ToIRC Message where
             fromSource = either fromChannel fromNick
             fromMessage = T.cons ':'
 
+instance ToIRC Join where
+    encodeIRC (Join c _) = B.unwords $ map TE.encodeUtf8 ["JOIN", fromChannel c]
+
 instance ToJSON InboundEvent
 instance ToJSON Message
 instance ToJSON NickChange
@@ -90,6 +95,7 @@ instance ToJSON NickChange
 instance FromJSON OutboundEvent
 instance FromJSON Message
 instance FromJSON User
+instance FromJSON Join
 
 makeFields ''Message
 makeFields ''Join
