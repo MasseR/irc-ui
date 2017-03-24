@@ -42,7 +42,7 @@ connect user host port = do
         pinger channel = C.subscribe channel $ \x ->
             case x of
                  InboundPing (Ping p) -> C.send channel (OutboundPong (Pong p))
-                 _ -> return ()
+                 _x -> sayShow x
         subscribeToPipe channel = subscribe
 
 producer socket = (P.concats . view PT.lines . PTE.decodeUtf8 $ P.fromSocket socket 4096)

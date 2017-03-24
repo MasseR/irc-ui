@@ -28,7 +28,8 @@ newtype Nick = Nick {fromNick :: Text} deriving (Generic, Show, ToJSON, FromJSON
 newtype Pong = Pong Text deriving (Show, Generic, ToJSON, FromJSON)
 newtype Ping = Ping Text deriving (Show, Generic, ToJSON, FromJSON)
 
-data Message = Message { messageSource :: Either Channel Nick
+data Message = Message { messageFrom :: Nick
+                       , messageTo :: Either Channel Nick
                        , messageContent :: Text }
              deriving (Show, Generic)
 
@@ -77,7 +78,7 @@ instance ToIRC Nick where
     encodeIRC (Nick n) = B.unwords $ map TE.encodeUtf8 ["NICK", n]
 
 instance ToIRC Message where
-    encodeIRC (Message s m) = B.unwords $ map TE.encodeUtf8 ["PRIVMSG", fromSource s, fromMessage m]
+    encodeIRC (Message _f t m) = B.unwords $ map TE.encodeUtf8 ["PRIVMSG", fromSource t, fromMessage m]
         where
             fromSource = either fromChannel fromNick
             fromMessage = T.cons ':'
@@ -104,13 +105,15 @@ deriveSafeCopy 0 'base ''Message
 
 parseIRC :: Parser InboundEvent
 parseIRC = InboundPing <$> parsePing
+    <|> InboundMessage <$> parsePrivMsg
 
 parsePing :: Parser Ping
 parsePing = Ping <$> (A.string "PING :" *> A.takeText <* A.endOfInput)
 
-parseSource :: Parser (Either Channel Nick)
-parseSource = (Left . Data.IRC.Channel) <$> channel
-    <|> (Right . Nick) <$> nick
+parsePrivMsg :: Parser Message
+parsePrivMsg = Message <$> parseFrom <* A.string " PRIVMSG " <*> parseTo <*> parseContent
     where
-        channel = T.cons <$> A.char '#' <*> A.takeWhile1 (/= ' ')
-        nick = A.takeWhile1 (/= ' ')
+        parseFrom = Nick <$> (A.char ':' *> A.takeWhile1 (/= '!') <* A.takeWhile1 (/= ' '))
+        parseTo = (Left . Channel <$> parseChannel) <|> (Right . Nick <$> A.takeWhile1 (/= ' '))
+        parseChannel = T.cons <$> A.char '#' <*> A.takeWhile (/= ' ')
+        parseContent = A.string " :" *> A.takeText
