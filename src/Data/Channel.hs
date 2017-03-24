@@ -11,6 +11,8 @@ import Control.Concurrent.STM (atomically)
 import Control.Monad.Trans
 import Control.Monad (forever)
 
+import qualified Pipes as P
+
 
 data Channel a b = Channel { channelIn :: TChan a
                            , channelOut :: TChan b }
@@ -19,6 +21,9 @@ subscribe :: MonadIO m => Channel a b -> (a -> m ()) -> m ()
 subscribe channel f = forever $ do
     a <- liftIO $ atomically $ readTChan $ channelIn channel
     f a
+
+requestEvent :: MonadIO m => Channel a b -> m a
+requestEvent = liftIO . atomically . readTChan . channelIn
 
 send :: MonadIO m => Channel a b -> b -> m ()
 send channel b =

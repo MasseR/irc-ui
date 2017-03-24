@@ -10,20 +10,21 @@ module Data.IRC where
 import Data.Text (Text)
 import qualified Data.Text.Encoding as TE
 import Data.Aeson
-import GHC.Generics (Generic)
+import GHC.Generics
 import Data.String
 import Control.Lens
 import Data.SafeCopy
 import Data.Time
-import Data.ByteString.Char8
+import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as B
 import Data.Monoid
 import qualified Data.Attoparsec.Text as A
 import Data.Attoparsec.Text (Parser)
 import qualified Data.Text as T
 import Control.Applicative
 
-newtype Channel = Channel Text deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
-newtype Nick = Nick Text deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
+newtype Channel = Channel {fromChannel :: Text} deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
+newtype Nick = Nick {fromNick :: Text} deriving (Generic, Show, ToJSON, FromJSON, IsString, Ord, Eq)
 newtype Pong = Pong Text deriving (Show, Generic, ToJSON, FromJSON)
 newtype Ping = Ping Text deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -56,11 +57,29 @@ data OutboundEvent = OutboundMessage Message
                    | OutboundUser User
                    deriving (Generic, Show)
 
+toIRC :: OutboundEvent -> ByteString
+toIRC (OutboundMessage msg) = encodeIRC msg
+toIRC (OutboundPong msg) = encodeIRC msg
+toIRC (OutboundNick msg) = encodeIRC msg
+toIRC (OutboundUser msg) = encodeIRC msg
+
 class ToIRC a where
     encodeIRC :: a -> ByteString
 
 instance ToIRC Pong where
     encodeIRC (Pong p) = "PONG " <> TE.encodeUtf8 p
+
+instance ToIRC User where
+    encodeIRC (User u m r) = B.unwords $ map TE.encodeUtf8 ["USER", u, m, "unused", r]
+
+instance ToIRC Nick where
+    encodeIRC (Nick n) = B.unwords $ map TE.encodeUtf8 ["NICK", n]
+
+instance ToIRC Message where
+    encodeIRC (Message s m) = B.unwords $ map TE.encodeUtf8 ["PRIVMSG", fromSource s, fromMessage m]
+        where
+            fromSource = either fromChannel fromNick
+            fromMessage = T.cons ':'
 
 instance ToJSON InboundEvent
 instance ToJSON Message
