@@ -2,6 +2,7 @@ local-packages:
     irc:
         location: .
 
+
 # nixpkgs:
 #     commit: a6665adde8242162d94ef69b8d387fae9c6b1b14
 #     sha256: 05fln8vrllnm98r0wycfhf50zv468sfqn8v6hffzkgb9gg8lxmcl

@@ -14,6 +14,7 @@ import Data.Sequence (Seq)
 import Data.Map.Strict (Map)
 
 data User = User { userEmail :: Text
+                 , userRealname :: Text
                  , userPreferredNick :: Nick
                  , userPassword :: ByteString
                  , userChannels :: Set Channel

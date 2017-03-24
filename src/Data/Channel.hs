@@ -4,6 +4,7 @@ module Data.Channel
     , send
     , newChannel
     , reverseChannel
+    , dupChannel
     ) where
 
 import Control.Concurrent.STM.TChan
@@ -35,3 +36,8 @@ reverseChannel (Channel a b) = Channel b a
 
 newChannel :: MonadIO m => m (Channel a b)
 newChannel = liftIO $ Channel <$> atomically newTChan <*> atomically newTChan
+
+dupChannel :: MonadIO m => Channel a b -> m (Channel a b)
+dupChannel (Channel i o) = do
+    i' <- liftIO $ atomically $ dupTChan i
+    return $ Channel i' o

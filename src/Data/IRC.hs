@@ -70,7 +70,8 @@ instance ToIRC Pong where
     encodeIRC (Pong p) = "PONG " <> TE.encodeUtf8 p
 
 instance ToIRC User where
-    encodeIRC (User u m r) = B.unwords $ map TE.encodeUtf8 ["USER", u, m, "unused", r]
+    encodeIRC (User u m r) = B.unwords $ map TE.encodeUtf8 ["USER", u, m, "unused", fromName r]
+        where fromName = T.cons ':'
 
 instance ToIRC Nick where
     encodeIRC (Nick n) = B.unwords $ map TE.encodeUtf8 ["NICK", n]
@@ -95,20 +96,21 @@ makeFields ''User
 makeFields ''NickChange
 makePrisms ''InboundEvent
 makePrisms ''OutboundEvent
+makePrisms ''Nick
 deriveSafeCopy 0 'base ''Nick
 deriveSafeCopy 0 'base ''Channel
 deriveSafeCopy 0 'base ''Message
 
 
--- parseIRC :: Parser InboundEvent
--- parseIRC = InboundPing <$> parsePing
---
--- parsePing :: Parser Text
--- parsePing = A.string "PING: " *> A.takeText
---
--- parseSource :: Parser (Either Data.IRC.Channel Nick)
--- parseSource = (Left . Data.IRC.Channel) <$> channel
---     <|> (Right . Nick) <$> nick
---     where
---         channel = T.cons <$> A.char '#' <*> A.takeWhile1 (/= ' ')
---         nick = A.takeWhile1 (/= ' ')
+parseIRC :: Parser InboundEvent
+parseIRC = InboundPing <$> parsePing
+
+parsePing :: Parser Ping
+parsePing = Ping <$> (A.string "PING :" *> A.takeText <* A.endOfInput)
+
+parseSource :: Parser (Either Channel Nick)
+parseSource = (Left . Data.IRC.Channel) <$> channel
+    <|> (Right . Nick) <$> nick
+    where
+        channel = T.cons <$> A.char '#' <*> A.takeWhile1 (/= ' ')
+        nick = A.takeWhile1 (/= ' ')
